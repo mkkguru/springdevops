@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Milan Tracker</title>
+    <link rel="stylesheet" href="/css/milan-tracker.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-users"></i>
+                    <h1>IT Milan Tracker</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="exportData()">
+                        <i class="fas fa-download"></i> Export Data
+                    </button>
+                    <button class="btn btn-primary" onclick="showAddForm()">
+                        <i class="fas fa-plus"></i> Add Milan
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <section class="dashboard">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalMilans">0</h3>
+                        <p>Total Milans</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalAttendance">0</h3>
+                        <p>Total Attendance</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalNewJoiners">0</h3>
+                        <p>New Joiners</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="averageAttendance">0</h3>
+                        <p>Avg Attendance</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Controls Section -->
+        <section class="controls">
+            <div class="search-filter-section">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search Milans, Valays, or participants...">
+                </div>
+                <div class="filter-section">
+                    <select id="valayFilter">
+                        <option value="">All Valays</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Milan List Section -->
+        <section class="milan-list">
+            <h2>Milan Records</h2>
+            <div id="milanContainer" class="milan-container">
+                <!-- Milan entries will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Milan Form Modal -->
+        <div id="milanModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Add New Milan</h3>
+                    <span class="close" onclick="closeModal()">&times;</span>
+                </div>
+                <form id="milanForm" class="milan-form">
+                    <div class="form-group">
+                        <label for="milanName">Milan Name *</label>
+                        <input type="text" id="milanName" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="valay">Valay (Location) *</label>
+                            <input type="text" id="valay" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="milanDate">Date *</label>
+                            <input type="date" id="milanDate" required>
+                        </div>
+                    </div>
+
+                    <div class="participants-section">
+                        <h4>Participants</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="ssCount">Svayam Sevaks Count</label>
+                                <input type="number" id="ssCount" min="0" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="shakaCount">Shaka Attendees</label>
+                                <input type="number" id="shakaCount" min="0" value="0">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="newSS">New SS</label>
+                                <input type="number" id="newSS" min="0" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="othersCount">Others</label>
+                                <input type="number" id="othersCount" min="0" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="balaCount">Bala Kids</label>
+                                <input type="number" id="balaCount" min="0" value="0">
+                            </div>
+                        </div>
+
+                        <div class="participants-list">
+                            <label>Participant Names</label>
+                            <div id="participantsList">
+                                <div class="participant-entry">
+                                    <input type="text" placeholder="Participant name" class="participant-name">
+                                    <select class="participant-type">
+                                        <option value="SS">SS</option>
+                                        <option value="New">New</option>
+                                        <option value="Other">Other</option>
+                                        <option value="Bala">Bala</option>
+                                    </select>
+                                    <button type="button" class="btn-remove" onclick="removeParticipant(this)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="addParticipant()">
+                                <i class="fas fa-plus"></i> Add Participant
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="totalSoochi">Total Soochi (Auto-calculated)</label>
+                        <input type="number" id="totalSoochi" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" rows="3" placeholder="Additional notes or details..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Milan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Import Modal -->
+        <div id="importModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Import Data</h3>
+                    <span class="close" onclick="closeImportModal()">&times;</span>
+                </div>
+                <div class="import-section">
+                    <div class="form-group">
+                        <label for="importFile">Select JSON file to import</label>
+                        <input type="file" id="importFile" accept=".json">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeImportModal()">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="importData()">Import</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/milan-tracker.js"></script>
+</body>
+</html>
