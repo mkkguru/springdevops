@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Milan Tracker</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #FFF8F5; color: #2C2C2C; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #FF6B35, #FFA366); color: white; padding: 20px; text-align: center; margin-bottom: 20px; border-radius: 10px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; border-left: 4px solid #FF6B35; }
+        .stat-value { font-size: 2rem; font-weight: bold; color: #FF6B35; }
+        .controls { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; font-weight: bold; }
+        .btn-primary { background: #FF6B35; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn:hover { opacity: 0.9; transform: translateY(-2px); transition: all 0.3s; }
+        .table-container { background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: bold; }
+        tr:hover { background: #f8f9fa; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; }
+        .modal-content { background: white; margin: 5% auto; padding: 0; border-radius: 10px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { background: linear-gradient(135deg, #FF6B35, #FFA366); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 20px; }
+        .close { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; }
+        .form-group input:focus { border-color: #FF6B35; outline: none; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .empty-state { text-align: center; padding: 40px; color: #666; }
+        .empty-state i { font-size: 3rem; color: #FF6B35; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-users"></i> IT Milan Tracker</h1>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-info" onclick="showReportsModal()"><i class="fas fa-chart-line"></i> Weekly Reports</button>
+                <button class="btn btn-success" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
+                <button class="btn btn-warning" onclick="showImportModal()"><i class="fas fa-upload"></i> Import</button>
+                <button class="btn btn-primary" onclick="showAddForm()"><i class="fas fa-plus"></i> Add Milan</button>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalMilans">0</div>
+                <div>Total Milans</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalAttendance">0</div>
+                <div>Total Attendance</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="newJoiners">0</div>
+                <div>New SS Joined</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="averageAttendance">0</div>
+                <div>Average Attendance</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="searchInput" placeholder="Search Milans..." style="width: 300px; padding: 10px; border: 2px solid #ddd; border-radius: 5px; margin-right: 10px;">
+            <select id="valayFilter" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px;">
+                <option value="">All Valays</option>
+            </select>
+        </div>
+
+        <div class="table-container">
+            <table id="milanTable">
+                <thead>
+                    <tr>
+                        <th>Milan Name</th>
+                        <th>Valay</th>
+                        <th>Date</th>
+                        <th>SS Count</th>
+                        <th>Total Soochi</th>
+                        <th>New SS</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="milanTableBody">
+                </tbody>
+            </table>
+            
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <i class="fas fa-calendar-plus"></i>
+                <h3>No Milan Records Found</h3>
+                <p>Start by adding your first Milan to track attendance and participation.</p>
+                <button class="btn btn-primary" onclick="showAddForm()"><i class="fas fa-plus"></i> Add Your First Milan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Milan Modal -->
+    <div id="milanModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add New Milan</h3>
+                <button class="close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="milanForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="milanName">Milan Name *</label>
+                            <input type="text" id="milanName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="valay">Valay *</label>
+                            <input type="text" id="valay" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="date">Date *</label>
+                            <input type="date" id="date" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="ssCount">SS Count</label>
+                            <input type="number" id="ssCount" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="shakaCount">Shaka Count</label>
+                            <input type="number" id="shakaCount" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="newSS">New SS</label>
+                            <input type="number" id="newSS" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="othersCount">Others Count</label>
+                            <input type="number" id="othersCount" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="balaCount">Bala Count</label>
+                            <input type="number" id="balaCount" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="totalSoochi">Total Soochi (Auto-calculated)</label>
+                            <input type="number" id="totalSoochi" readonly style="background: #f8f9fa;">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" rows="3" placeholder="Additional notes..."></textarea>
+                    </div>
+                    
+                    <div style="text-align: right; margin-top: 20px;">
+                        <button type="button" class="btn" onclick="closeModal()" style="background: #6c757d; color: white;">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Milan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Import Data</h3>
+                <button class="close" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Import Type:</label>
+                    <label><input type="radio" name="importType" value="json" checked> JSON File</label>
+                    <label><input type="radio" name="importType" value="excel"> Excel/CSV File</label>
+                </div>
+                <div class="form-group">
+                    <label for="importFile">Select file to import</label>
+                    <input type="file" id="importFile" accept=".json,.xlsx,.xls,.csv">
+                </div>
+                <div style="background: #FFF3CD; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                    <i class="fas fa-info-circle"></i> This will replace all existing data. Export your current data first.
+                </div>
+                <div style="text-align: right;">
+                    <button class="btn" onclick="closeImportModal()" style="background: #6c757d; color: white;">Cancel</button>
+                    <button class="btn btn-primary" onclick="importData()">Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports Modal -->
+    <div id="reportsModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>Weekly Reports</h3>
+                <button class="close" onclick="closeReportsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid" style="margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="reportStartDate">From Date:</label>
+                        <input type="date" id="reportStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="reportEndDate">To Date:</label>
+                        <input type="date" id="reportEndDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="reportValay">Filter by Valay:</label>
+                        <select id="reportValay"><option value="">All Valays</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary" onclick="generateWeeklyReport()">Generate Report</button>
+                        <button class="btn btn-success" onclick="exportReportToExcel()" id="exportReportBtn" style="display: none;">Export Report</button>
+                    </div>
+                </div>
+                <div id="weeklyReportContent" style="min-height: 300px; background: #f8f9fa; padding: 20px; border-radius: 5px;">
+                    <div class="empty-state">
+                        <i class="fas fa-chart-bar"></i>
+                        <p>Select date range and generate report to view weekly statistics</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class MilanTracker {
+            constructor() {
+                this.milans = [];
+                this.currentEditingId = null;
+                this.init();
+            }
+
+            init() {
+                this.loadData();
+                this.setupEventListeners();
+                this.updateDashboard();
+                this.renderMilans();
+                this.populateValayFilter();
+                this.addSampleDataIfEmpty();
+            }
+
+            loadData() {
+                const savedData = localStorage.getItem('milan-tracker-data');
+                if (savedData) {
+                    try { this.milans = JSON.parse(savedData); }
+                    catch (error) { this.milans = []; }
+                }
+            }
+
+            saveData() {
+                try { localStorage.setItem('milan-tracker-data', JSON.stringify(this.milans)); }
+                catch (error) { alert('Error saving data. Please try again.'); }
+            }
+
+            setupEventListeners() {
+                document.getElementById('milanForm').addEventListener('submit', (e) => {
+                    e.preventDefault(); this.saveMilan();
+                });
+                
+                ['ssCount', 'shakaCount', 'newSS', 'othersCount', 'balaCount'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', () => this.calculateTotalSoochi());
+                });
+                
+                document.getElementById('searchInput').addEventListener('input', (e) => this.handleSearch(e.target.value));
+                document.getElementById('valayFilter').addEventListener('change', (e) => this.handleFilter(e.target.value));
+                
+                window.addEventListener('click', (e) => {
+                    if (e.target.className === 'modal') {
+                        e.target.style.display = 'none';
+                        document.body.style.overflow = 'auto';
+                    }
+                });
+            }
+
+            showModal(milan = null) {
+                const modal = document.getElementById('milanModal');
+                const modalTitle = document.getElementById('modalTitle');
+                
+                if (milan) {
+                    modalTitle.textContent = 'Edit Milan';
+                    this.currentEditingId = milan.id;
+                    this.populateForm(milan);
+                } else {
+                    modalTitle.textContent = 'Add New Milan';
+                    this.currentEditingId = null;
+                    this.resetForm();
+                }
+                
+                modal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            }
+
+            closeModal() {
+                document.getElementById('milanModal').style.display = 'none';
+                document.body.style.overflow = 'auto';
+                this.resetForm();
+            }
+
+            populateForm(milan) {
+                document.getElementById('milanName').value = milan.name;
+                document.getElementById('valay').value = milan.valay;
+                document.getElementById('date').value = milan.date;
+                document.getElementById('ssCount').value = milan.ssCount;
+                document.getElementById('shakaCount').value = milan.shakaCount;
+                document.getElementById('newSS').value = milan.newSS;
+                document.getElementById('othersCount').value = milan.othersCount;
+                document.getElementById('balaCount').value = milan.balaCount;
+                document.getElementById('notes').value = milan.notes || '';
+                this.calculateTotalSoochi();
+            }
+
+            resetForm() {
+                document.getElementById('milanForm').reset();
+                this.calculateTotalSoochi();
+            }
+
+            saveMilan() {
+                const formData = this.getFormData();
+                
+                if (this.currentEditingId) {
+                    const index = this.milans.findIndex(m => m.id === this.currentEditingId);
+                    if (index !== -1) this.milans[index] = { ...formData, id: this.currentEditingId };
+                } else {
+                    this.milans.push({ ...formData, id: this.generateId(), createdAt: new Date().toISOString() });
+                }
+                
+                this.saveData();
+                this.updateDashboard();
+                this.renderMilans();
+                this.populateValayFilter();
+                this.closeModal();
+                this.showNotification('Milan saved successfully!');
+            }
+
+            getFormData() {
+                return {
+                    name: document.getElementById('milanName').value.trim(),
+                    valay: document.getElementById('valay').value.trim(),
+                    date: document.getElementById('date').value,
+                    ssCount: parseInt(document.getElementById('ssCount').value) || 0,
+                    shakaCount: parseInt(document.getElementById('shakaCount').value) || 0,
+                    newSS: parseInt(document.getElementById('newSS').value) || 0,
+                    othersCount: parseInt(document.getElementById('othersCount').value) || 0,
+                    balaCount: parseInt(document.getElementById('balaCount').value) || 0,
+                    totalSoochi: parseInt(document.getElementById('totalSoochi').value) || 0,
+                    participants: [],
+                    notes: document.getElementById('notes').value.trim()
+                };
+            }
+
+            editMilan(id) {
+                const milan = this.milans.find(m => m.id === id);
+                if (milan) this.showModal(milan);
+            }
+
+            deleteMilan(id) {
+                if (confirm('Are you sure you want to delete this Milan?')) {
+                    this.milans = this.milans.filter(m => m.id !== id);
+                    this.saveData();
+                    this.updateDashboard();
+                    this.renderMilans();
+                    this.populateValayFilter();
+                    this.showNotification('Milan deleted successfully!');
+                }
+            }
+
+            calculateTotalSoochi() {
+                const total = ['ssCount', 'shakaCount', 'newSS', 'othersCount', 'balaCount']
+                    .reduce((sum, id) => sum + (parseInt(document.getElementById(id).value) || 0), 0);
+                document.getElementById('totalSoochi').value = total;
+            }
+
+            updateDashboard() {
+                const totalMilans = this.milans.length;
+                const totalAttendance = this.milans.reduce((sum, milan) => sum + milan.totalSoochi, 0);
+                const newJoiners = this.milans.reduce((sum, milan) => sum + milan.newSS, 0);
+                const averageAttendance = totalMilans > 0 ? (totalAttendance / totalMilans).toFixed(1) : 0;
+                
+                document.getElementById('totalMilans').textContent = totalMilans;
+                document.getElementById('totalAttendance').textContent = totalAttendance;
+                document.getElementById('newJoiners').textContent = newJoiners;
+                document.getElementById('averageAttendance').textContent = averageAttendance;
+            }
+
+            renderMilans() {
+                const tableBody = document.getElementById('milanTableBody');
+                const emptyState = document.getElementById('emptyState');
+                
+                if (this.milans.length === 0) {
+                    tableBody.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    return;
+                }
+                
+                emptyState.style.display = 'none';
+                tableBody.innerHTML = this.milans.map(milan => `
+                    <tr>
+                        <td><strong>${milan.name}</strong></td>
+                        <td>${milan.valay}</td>
+                        <td>${new Date(milan.date).toLocaleDateString()}</td>
+                        <td>${milan.ssCount}</td>
+                        <td><strong>${milan.totalSoochi}</strong></td>
+                        <td>${milan.newSS}</td>
+                        <td>
+                            <button onclick="milanTracker.editMilan('${milan.id}')" style="padding: 5px 10px; background: #FF6B35; color: white; border: none; border-radius: 3px; cursor: pointer; margin-right: 5px;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="milanTracker.deleteMilan('${milan.id}')" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            handleSearch(query) {
+                // Search functionality can be added here
+                console.log('Search:', query);
+            }
+
+            handleFilter(valay) {
+                // Filter functionality can be added here
+                console.log('Filter:', valay);
+            }
+
+            populateValayFilter() {
+                const select = document.getElementById('valayFilter');
+                const reportSelect = document.getElementById('reportValay');
+                const valays = [...new Set(this.milans.map(milan => milan.valay))].sort();
+                
+                const updateSelect = (selectElement) => {
+                    const currentValue = selectElement.value;
+                    selectElement.innerHTML = '<option value="">All Valays</option>';
+                    valays.forEach(valay => {
+                        const option = document.createElement('option');
+                        option.value = valay;
+                        option.textContent = valay;
+                        selectElement.appendChild(option);
+                    });
+                    selectElement.value = currentValue;
+                };
+                
+                updateSelect(select);
+                if (reportSelect) updateSelect(reportSelect);
+            }
+
+            exportToExcel() {
+                if (!window.XLSX) {
+                    alert('Excel functionality is not available. Please check your internet connection.');
+                    return;
+                }
+
+                const excelData = this.milans.map(milan => ({
+                    'Milan Name': milan.name,
+                    'Valay': milan.valay,
+                    'Date': milan.date,
+                    'SS Count': milan.ssCount,
+                    'Shaka Count': milan.shakaCount,
+                    'New SS': milan.newSS,
+                    'Others Count': milan.othersCount,
+                    'Bala Count': milan.balaCount,
+                    'Total Soochi': milan.totalSoochi,
+                    'Notes': milan.notes || ''
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(excelData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Milan Data');
+                
+                const filename = `milan-tracker-data-${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(wb, filename);
+                
+                this.showNotification('Data exported to Excel successfully!');
+            }
+
+            showImportModal() {
+                document.getElementById('importModal').style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            }
+
+            closeImportModal() {
+                document.getElementById('importModal').style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+
+            importData() {
+                const fileInput = document.getElementById('importFile');
+                const file = fileInput.files[0];
+                const importType = document.querySelector('input[name="importType"]:checked').value;
+                
+                if (!file) {
+                    alert('Please select a file to import');
+                    return;
+                }
+
+                if (importType === 'excel') {
+                    this.importExcelData(file);
+                } else {
+                    this.importJsonData(file);
+                }
+            }
+
+            importJsonData(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        if (!Array.isArray(importedData)) throw new Error('Invalid file format');
+                        
+                        if (confirm('This will replace all existing data. Continue?')) {
+                            this.milans = importedData;
+                            this.saveData();
+                            this.updateDashboard();
+                            this.renderMilans();
+                            this.populateValayFilter();
+                            this.closeImportModal();
+                            this.showNotification('JSON data imported successfully!');
+                        }
+                    } catch (error) {
+                        alert('Error importing file. Please check the file format.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            importExcelData(file) {
+                if (!window.XLSX) {
+                    alert('Excel functionality is not available. Please check your internet connection.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                        const importedData = jsonData.map((row, index) => ({
+                            id: `imported_${Date.now()}_${index}`,
+                            name: row['Milan Name'] || '',
+                            valay: row['Valay'] || '',
+                            date: this.formatDateForInput(row['Date']) || new Date().toISOString().split('T')[0],
+                            ssCount: parseInt(row['SS Count']) || 0,
+                            shakaCount: parseInt(row['Shaka Count']) || 0,
+                            newSS: parseInt(row['New SS']) || 0,
+                            othersCount: parseInt(row['Others Count']) || 0,
+                            balaCount: parseInt(row['Bala Count']) || 0,
+                            totalSoochi: parseInt(row['Total Soochi']) || 0,
+                            participants: [],
+                            notes: row['Notes'] || '',
+                            createdAt: new Date().toISOString()
+                        }));
+
+                        if (confirm(`Import ${importedData.length} records? This will replace all existing data.`)) {
+                            this.milans = importedData;
+                            this.saveData();
+                            this.updateDashboard();
+                            this.renderMilans();
+                            this.populateValayFilter();
+                            this.closeImportModal();
+                            this.showNotification('Excel data imported successfully!');
+                        }
+                    } catch (error) {
+                        alert('Error importing Excel file. Please check the file format.');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            formatDateForInput(dateString) {
+                if (!dateString) return null;
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    if (!isNaN(parseFloat(dateString))) {
+                        const excelDate = new Date((parseFloat(dateString) - 25569) * 86400 * 1000);
+                        return excelDate.toISOString().split('T')[0];
+                    }
+                    return null;
+                }
+                return date.toISOString().split('T')[0];
+            }
+
+            showReportsModal() {
+                document.getElementById('reportsModal').style.display = 'block';
+                document.body.style.overflow = 'hidden';
+                
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 28);
+                
+                document.getElementById('reportEndDate').value = endDate.toISOString().split('T')[0];
+                document.getElementById('reportStartDate').value = startDate.toISOString().split('T')[0];
+            }
+
+            closeReportsModal() {
+                document.getElementById('reportsModal').style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+
+            generateWeeklyReport() {
+                const startDate = document.getElementById('reportStartDate').value;
+                const endDate = document.getElementById('reportEndDate').value;
+                const selectedValay = document.getElementById('reportValay').value;
+                
+                if (!startDate || !endDate) {
+                    alert('Please select both start and end dates');
+                    return;
+                }
+
+                const filteredMilans = this.milans.filter(milan => {
+                    const milanDate = new Date(milan.date);
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    
+                    const dateInRange = milanDate >= start && milanDate <= end;
+                    const valayMatch = !selectedValay || milan.valay === selectedValay;
+                    
+                    return dateInRange && valayMatch;
+                });
+
+                this.renderWeeklyReport(filteredMilans, startDate, endDate, selectedValay);
+                document.getElementById('exportReportBtn').style.display = 'inline-block';
+            }
+
+            renderWeeklyReport(milans, startDate, endDate, valay) {
+                const content = document.getElementById('weeklyReportContent');
+                
+                if (milans.length === 0) {
+                    content.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>No Milan data found for the selected date range${valay ? ` and Valay: ${valay}` : ''}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const totalMilans = milans.length;
+                const totalAttendance = milans.reduce((sum, milan) => sum + milan.totalSoochi, 0);
+                const totalNewSS = milans.reduce((sum, milan) => sum + milan.newSS, 0);
+                const totalBala = milans.reduce((sum, milan) => sum + milan.balaCount, 0);
+                const avgAttendance = totalAttendance / totalMilans;
+                
+                content.innerHTML = `
+                    <h3>Weekly Report: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}</h3>
+                    ${valay ? `<p>Filtered by Valay: <strong>${valay}</strong></p>` : ''}
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0;">
+                        <div style="background: linear-gradient(135deg, #FF6B35, #FFA366); color: white; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold;">${totalMilans}</div>
+                            <div>Total Milans</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #FF6B35, #FFA366); color: white; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold;">${totalAttendance}</div>
+                            <div>Total Attendance</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #FF6B35, #FFA366); color: white; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold;">${avgAttendance.toFixed(1)}</div>
+                            <div>Average Attendance</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #FF6B35, #FFA366); color: white; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold;">${totalNewSS}</div>
+                            <div>New SS Joined</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #FF6B35, #FFA366); color: white; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold;">${totalBala}</div>
+                            <div>Total Bala</div>
+                        </div>
+                    </div>
+                    
+                    <h4>Milan Details:</h4>
+                    ${milans.map(milan => `
+                        <div style="background: white; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #FF6B35;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h5 style="margin: 0; color: #FF6B35;">${milan.name}</h5>
+                                <span style="color: #666;">${new Date(milan.date).toLocaleDateString()}</span>
+                            </div>
+                            <p style="margin: 5px 0; color: #666;">Valay: ${milan.valay}</p>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 10px; margin-top: 10px;">
+                                <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                                    <div style="font-weight: bold; color: #FF6B35;">${milan.ssCount}</div>
+                                    <div style="font-size: 0.8rem; color: #666;">SS</div>
+                                </div>
+                                <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                                    <div style="font-weight: bold; color: #FF6B35;">${milan.shakaCount}</div>
+                                    <div style="font-size: 0.8rem; color: #666;">Shaka</div>
+                                </div>
+                                <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                                    <div style="font-weight: bold; color: #FF6B35;">${milan.newSS}</div>
+                                    <div style="font-size: 0.8rem; color: #666;">New SS</div>
+                                </div>
+                                <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                                    <div style="font-weight: bold; color: #FF6B35;">${milan.balaCount}</div>
+                                    <div style="font-size: 0.8rem; color: #666;">Bala</div>
+                                </div>
+                                <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                                    <div style="font-weight: bold; color: #FF6B35;">${milan.totalSoochi}</div>
+                                    <div style="font-size: 0.8rem; color: #666;">Total</div>
+                                </div>
+                            </div>
+                            ${milan.notes ? `<p style="margin-top: 10px; font-style: italic;">Notes: ${milan.notes}</p>` : ''}
+                        </div>
+                    `).join('')}
+                `;
+            }
+
+            exportReportToExcel() {
+                if (!window.XLSX) {
+                    alert('Excel functionality is not available. Please check your internet connection.');
+                    return;
+                }
+
+                const startDate = document.getElementById('reportStartDate').value;
+                const endDate = document.getElementById('reportEndDate').value;
+                const selectedValay = document.getElementById('reportValay').value;
+                
+                const filteredMilans = this.milans.filter(milan => {
+                    const milanDate = new Date(milan.date);
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    
+                    const dateInRange = milanDate >= start && milanDate <= end;
+                    const valayMatch = !selectedValay || milan.valay === selectedValay;
+                    
+                    return dateInRange && valayMatch;
+                });
+
+                if (filteredMilans.length === 0) {
+                    alert('No data to export for the selected criteria');
+                    return;
+                }
+
+                const summaryData = [{
+                    'Report Period': `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`,
+                    'Valay Filter': selectedValay || 'All Valays',
+                    'Total Milans': filteredMilans.length,
+                    'Total Attendance': filteredMilans.reduce((sum, milan) => sum + milan.totalSoochi, 0),
+                    'Average Attendance': (filteredMilans.reduce((sum, milan) => sum + milan.totalSoochi, 0) / filteredMilans.length).toFixed(1),
+                    'Total New SS': filteredMilans.reduce((sum, milan) => sum + milan.newSS, 0),
+                    'Total Bala': filteredMilans.reduce((sum, milan) => sum + milan.balaCount, 0)
+                }];
+
+                const detailedData = filteredMilans.map(milan => ({
+                    'Date': new Date(milan.date).toLocaleDateString(),
+                    'Milan Name': milan.name,
+                    'Valay': milan.valay,
+                    'SS Count': milan.ssCount,
+                    'Shaka Count': milan.shakaCount,
+                    'New SS': milan.newSS,
+                    'Others Count': milan.othersCount,
+                    'Bala Count': milan.balaCount,
+                    'Total Soochi': milan.totalSoochi,
+                    'Notes': milan.notes || ''
+                }));
+
+                const wb = XLSX.utils.book_new();
+                const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+                XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+                const detailWs = XLSX.utils.json_to_sheet(detailedData);
+                XLSX.utils.book_append_sheet(wb, detailWs, 'Detailed Data');
+                
+                const filename = `milan-weekly-report-${startDate}-to-${endDate}.xlsx`;
+                XLSX.writeFile(wb, filename);
+                
+                this.showNotification('Weekly report exported to Excel successfully!');
+            }
+
+            generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            showNotification(message) {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed; top: 20px; right: 20px; background: white; padding: 15px 20px;
+                    border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border-left: 4px solid #FF6B35;
+                    z-index: 1001; max-width: 300px; color: #2C2C2C; font-weight: bold;
+                `;
+                notification.innerHTML = `<i class="fas fa-check-circle" style="color: #FF6B35; margin-right: 8px;"></i>${message}`;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    if (notification.parentNode) notification.parentNode.removeChild(notification);
+                }, 3000);
+            }
+
+            addSampleDataIfEmpty() {
+                if (this.milans.length === 0) {
+                    const sampleData = [
+                        {
+                            id: 'sample1',
+                            name: 'Ashwatthama',
+                            valay: 'Gachibowli',
+                            date: '2025-07-20',
+                            ssCount: 8,
+                            shakaCount: 5,
+                            newSS: 3,
+                            othersCount: 2,
+                            balaCount: 4,
+                            totalSoochi: 22,
+                            participants: [],
+                            notes: 'Great participation from all divisions',
+                            createdAt: new Date().toISOString()
+                        },
+                        {
+                            id: 'sample2',
+                            name: 'Vishvamitra',
+                            valay: 'Narsingi',
+                            date: '2025-07-13',
+                            ssCount: 6,
+                            shakaCount: 4,
+                            newSS: 2,
+                            othersCount: 0,
+                            balaCount: 6,
+                            totalSoochi: 18,
+                            participants: [],
+                            notes: 'Good turnout from Bala division',
+                            createdAt: new Date().toISOString()
+                        }
+                    ];
+                    
+                    this.milans = sampleData;
+                    this.saveData();
+                    this.updateDashboard();
+                    this.renderMilans();
+                    this.populateValayFilter();
+                }
+            }
+        }
+
+        // Global functions
+        function showAddForm() { milanTracker.showModal(); }
+        function closeModal() { milanTracker.closeModal(); }
+        function exportToExcel() { milanTracker.exportToExcel(); }
+        function showImportModal() { milanTracker.showImportModal(); }
+        function closeImportModal() { milanTracker.closeImportModal(); }
+        function importData() { milanTracker.importData(); }
+        function showReportsModal() { milanTracker.showReportsModal(); }
+        function closeReportsModal() { milanTracker.closeReportsModal(); }
+        function generateWeeklyReport() { milanTracker.generateWeeklyReport(); }
+        function exportReportToExcel() { milanTracker.exportReportToExcel(); }
+
+        // Initialize the application
+        let milanTracker;
+        document.addEventListener('DOMContentLoaded', () => {
+            milanTracker = new MilanTracker();
+        });
+    </script>
+</body>
+</html>
