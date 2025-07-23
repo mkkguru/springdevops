@@ -667,3 +667,204 @@ body {
         font-size: 2rem !important;
     }
 }
+
+/* Reports Modal Styles */
+.modal-large {
+    max-width: 90%;
+    width: 1000px;
+}
+
+.reports-section {
+    padding: 1.5rem 0;
+}
+
+.reports-controls {
+    background: var(--background-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+.date-range-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+
+.date-range-selector .form-group {
+    margin-bottom: 0;
+}
+
+.report-content {
+    background: var(--surface-color);
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: var(--shadow-light);
+    min-height: 400px;
+}
+
+.report-placeholder {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 4rem 2rem;
+}
+
+.report-placeholder i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.weekly-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.summary-card {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: var(--shadow-medium);
+}
+
+.summary-card h4 {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.summary-card .value {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.weekly-details {
+    margin-top: 2rem;
+}
+
+.week-section {
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.week-header {
+    background: var(--gradient-secondary);
+    color: var(--text-primary);
+    padding: 1rem;
+    font-weight: bold;
+}
+
+.week-content {
+    padding: 1rem;
+}
+
+.milan-item {
+    background: var(--background-color);
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.milan-item:last-child {
+    margin-bottom: 0;
+}
+
+.milan-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.milan-stat {
+    text-align: center;
+    padding: 0.5rem;
+    background: var(--surface-color);
+    border-radius: 4px;
+}
+
+.milan-stat .label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.milan-stat .value {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* Import Type Selector */
+.import-type-selector {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--background-color);
+    border-radius: 6px;
+}
+
+.import-type-selector label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.import-type-selector input[type="radio"] {
+    accent-color: var(--primary-color);
+}
+
+.import-note {
+    background: #FFF3CD;
+    border: 1px solid #FFEAA7;
+    color: #856404;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.import-note i {
+    color: var(--accent-color);
+}
+
+/* Button color variations */
+.btn-info {
+    background: linear-gradient(135deg, #17a2b8, #5bc0de);
+    color: white;
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #138496, #46b8d6);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #5cb85c);
+    color: white;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #218838, #54a954);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffc107, #ffdb4d);
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #e0a800, #ffcd39);
+}

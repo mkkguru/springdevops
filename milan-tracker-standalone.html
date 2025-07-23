@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Milan Tracker - Standalone</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SheetJS for Excel functionality -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* RSS-Inspired Saffron Theme for Milan Tracker */
+        :root {
+            --primary-color: #FF6B35;
+            --primary-dark: #E55A2B;
+            --primary-light: #FF8159;
+            --secondary-color: #FFA366;
+            --accent-color: #FFD700;
+            --background-color: #FFF8F5;
+            --surface-color: #FFFFFF;
+            --text-primary: #2C2C2C;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --border-color: #E0E0E0;
+            --shadow-light: rgba(255, 107, 53, 0.1);
+            --shadow-medium: rgba(255, 107, 53, 0.2);
+            --gradient-primary: linear-gradient(135deg, #FF6B35 0%, #FFA366 100%);
+            --gradient-secondary: linear-gradient(135deg, #FFD700 0%, #FFA366 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Styles */
+        .header {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 4px 20px var(--shadow-medium);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo i {
+            font-size: 2rem;
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary {
+            background: var(--gradient-secondary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8, #5bc0de);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #5cb85c);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107, #ffdb4d);
+            color: #212529;
+        }
+
+        /* Dashboard Styles */
+        .dashboard {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface-color);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow-light);
+            border-left: 4px solid var(--primary-color);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        /* Controls Section */
+        .controls {
+            background: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow-light);
+            margin-bottom: 2rem;
+        }
+
+        .controls-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-filter {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-input, .filter-select {
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus, .filter-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .filter-select {
+            min-width: 150px;
+        }
+
+        /* Milan List Styles */
+        .milan-list {
+            background: var(--surface-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow-light);
+            overflow: hidden;
+        }
+
+        .milan-list-header {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 1.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .milan-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .milan-table th,
+        .milan-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .milan-table th {
+            background: var(--background-color);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .milan-table tbody tr:hover {
+            background: var(--background-color);
+        }
+
+        .milan-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: var(--surface-color);
+            margin: 2rem auto;
+            padding: 0;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-large {
+            max-width: 90%;
+            width: 1000px;
+        }
+
+        .modal-header {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.3s ease;
+        }
+
+        .close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        /* Form Styles */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .participants-section {
+            background: var(--background-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .participants-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .participant-item {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: var(--surface-color);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        /* Import/Reports specific styles */
+        .import-type-selector {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--background-color);
+            border-radius: 6px;
+        }
+
+        .import-type-selector label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .import-note {
+            background: #FFF3CD;
+            border: 1px solid #FFEAA7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .reports-section {
+            padding: 1.5rem 0;
+        }
+
+        .reports-controls {
+            background: var(--background-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .date-range-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .report-content {
+            background: var(--surface-color);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: var(--shadow-light);
+            min-height: 400px;
+        }
+
+        .weekly-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: var(--shadow-medium);
+        }
+
+        .milan-cards {
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .milan-card {
+            background: var(--surface-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px var(--shadow-light);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 0 1rem;
+            }
+            
+            .dashboard {
+                padding: 1rem;
+            }
+            
+            .controls-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .search-filter {
+                flex-direction: column;
+            }
+            
+            .search-input {
+                min-width: auto;
+            }
+            
+            .milan-table {
+                display: none;
+            }
+            
+            .milan-cards {
+                display: grid;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .participant-item {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        /* Notification Styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--surface-color);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 4px solid var(--primary-color);
+            z-index: 1001;
+            max-width: 300px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-users"></i>
+                    <h1>IT Milan Tracker</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-info" onclick="showReportsModal()">
+                        <i class="fas fa-chart-line"></i> Weekly Reports
+                    </button>
+                    <button class="btn btn-success" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel"></i> Export Excel
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportData()">
+                        <i class="fas fa-download"></i> Export JSON
+                    </button>
+                    <button class="btn btn-warning" onclick="showImportModal()">
+                        <i class="fas fa-upload"></i> Import
+                    </button>
+                    <button class="btn btn-primary" onclick="showAddForm()">
+                        <i class="fas fa-plus"></i> Add Milan
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <section class="dashboard">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="stat-value" id="totalMilans">0</div>
+                    <div class="stat-label">Total Milans</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-value" id="totalAttendance">0</div>
+                    <div class="stat-label">Total Attendance</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="stat-value" id="newJoiners">0</div>
+                    <div class="stat-label">New SS Joined</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-value" id="averageAttendance">0</div>
+                    <div class="stat-label">Average Attendance</div>
+                </div>
+            </div>
+
+            <!-- Controls Section -->
+            <div class="controls">
+                <div class="controls-row">
+                    <div class="search-filter">
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search Milans, Valays, or participants...">
+                        <select id="valayFilter" class="filter-select">
+                            <option value="">All Valays</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Milan List Section -->
+            <div class="milan-list">
+                <div class="milan-list-header">
+                    <i class="fas fa-list"></i> Milan Records
+                </div>
+                
+                <!-- Desktop Table View -->
+                <table class="milan-table" id="milanTable">
+                    <thead>
+                        <tr>
+                            <th>Milan Name</th>
+                            <th>Valay</th>
+                            <th>Date</th>
+                            <th>SS Count</th>
+                            <th>Total Soochi</th>
+                            <th>New SS</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="milanTableBody">
+                        <!-- Milan data will be populated here -->
+                    </tbody>
+                </table>
+                
+                <!-- Mobile Card View -->
+                <div class="milan-cards" id="milanCards">
+                    <!-- Milan cards will be populated here for mobile -->
+                </div>
+                
+                <!-- Empty State -->
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <i class="fas fa-calendar-plus"></i>
+                    <h3>No Milan Records Found</h3>
+                    <p>Start by adding your first Milan to track attendance and participation.</p>
+                    <button class="btn btn-primary" onclick="showAddForm()">
+                        <i class="fas fa-plus"></i> Add Your First Milan
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Add/Edit Milan Modal -->
+        <div id="milanModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Add New Milan</h3>
+                    <button class="close" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="milanForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="milanName">Milan Name *</label>
+                                <input type="text" id="milanName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="valay">Valay *</label>
+                                <input type="text" id="valay" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="date">Date *</label>
+                                <input type="date" id="date" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="ssCount">SS Count</label>
+                                <input type="number" id="ssCount" min="0" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="shakaCount">Shaka Count</label>
+                                <input type="number" id="shakaCount" min="0" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="newSS">New SS</label>
+                                <input type="number" id="newSS" min="0" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="othersCount">Others Count</label>
+                                <input type="number" id="othersCount" min="0" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="balaCount">Bala Count</label>
+                                <input type="number" id="balaCount" min="0" value="0">
+                            </div>
+                        </div>
+                        
+                        <div class="participants-section">
+                            <div class="participants-header">
+                                <h4>Participants</h4>
+                            </div>
+                            <div id="participantsList">
+                                <!-- Participants will be added here -->
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="addParticipant()">
+                                <i class="fas fa-plus"></i> Add Participant
+                            </button>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="totalSoochi">Total Soochi (Auto-calculated)</label>
+                            <input type="number" id="totalSoochi" readonly>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="notes">Notes</label>
+                            <textarea id="notes" rows="3" placeholder="Additional notes or details..."></textarea>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Milan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import Modal -->
+        <div id="importModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Import Data</h3>
+                    <span class="close" onclick="closeImportModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="import-type-selector">
+                        <label><input type="radio" name="importType" value="json" checked> JSON File</label>
+                        <label><input type="radio" name="importType" value="excel"> Excel/CSV File</label>
+                    </div>
+                    <div class="form-group">
+                        <label for="importFile" id="fileInputLabel">Select JSON file to import</label>
+                        <input type="file" id="importFile" accept=".json,.xlsx,.xls,.csv">
+                    </div>
+                    <div class="import-note">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="importNote">This will replace all existing data. Make sure to export your current data first.</span>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeImportModal()">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="importData()">Import</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly Reports Modal -->
+        <div id="reportsModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h3>Weekly Reports</h3>
+                    <span class="close" onclick="closeReportsModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="reports-section">
+                        <div class="reports-controls">
+                            <div class="date-range-selector">
+                                <div class="form-group">
+                                    <label for="reportStartDate">From Date:</label>
+                                    <input type="date" id="reportStartDate">
+                                </div>
+                                <div class="form-group">
+                                    <label for="reportEndDate">To Date:</label>
+                                    <input type="date" id="reportEndDate">
+                                </div>
+                                <div class="form-group">
+                                    <label for="reportValay">Filter by Valay:</label>
+                                    <select id="reportValay">
+                                        <option value="">All Valays</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button class="btn btn-primary" onclick="generateWeeklyReport()">
+                                        <i class="fas fa-chart-line"></i> Generate Report
+                                    </button>
+                                </div>
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button class="btn btn-success" onclick="exportReportToExcel()" id="exportReportBtn" style="display: none;">
+                                        <i class="fas fa-file-excel"></i> Export Report
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="weeklyReportContent" class="report-content">
+                            <div class="empty-state">
+                                <i class="fas fa-chart-bar"></i>
+                                <p>Select date range and generate report to view weekly statistics</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Milan Tracker Application JavaScript
+        class MilanTracker {
+            constructor() {
+                this.milans = [];
+                this.currentEditingId = null;
+                this.init();
+            }
+
+            init() {
+                this.loadData();
+                this.setupEventListeners();
+                this.updateDashboard();
+                this.renderMilans();
+                this.populateValayFilter();
+                // Add sample data if none exists
+                this.addSampleDataIfEmpty();
+            }
+
+            // Data Management
+            loadData() {
+                const savedData = localStorage.getItem('milan-tracker-data');
+                if (savedData) {
+                    try {
+                        this.milans = JSON.parse(savedData);
+                    } catch (error) {
+                        console.error('Error loading data:', error);
+                        this.milans = [];
+                    }
+                }
+            }
+
+            saveData() {
+                try {
+                    localStorage.setItem('milan-tracker-data', JSON.stringify(this.milans));
+                } catch (error) {
+                    console.error('Error saving data:', error);
+                    alert('Error saving data. Please try again.');
+                }
+            }
+
+            // Event Listeners
+            setupEventListeners() {
+                // Form submission
+                document.getElementById('milanForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveMilan();
+                });
+
+                // Auto-calculate total soochi
+                const numberInputs = ['ssCount', 'shakaCount', 'newSS', 'othersCount', 'balaCount'];
+                numberInputs.forEach(id => {
+                    document.getElementById(id).addEventListener('input', () => {
+                        this.calculateTotalSoochi();
+                    });
+                });
+
+                // Search functionality
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    this.handleSearch(e.target.value);
+                });
+
+                // Filter functionality
+                document.getElementById('valayFilter').addEventListener('change', (e) => {
+                    this.handleFilter(e.target.value);
+                });
+
+                // Import type selector
+                document.addEventListener('change', (e) => {
+                    if (e.target.name === 'importType') {
+                        this.updateImportInterface(e.target.value);
+                    }
+                });
+
+                // Modal close on outside click
+                window.addEventListener('click', (e) => {
+                    const modal = document.getElementById('milanModal');
+                    const importModal = document.getElementById('importModal');
+                    const reportsModal = document.getElementById('reportsModal');
+                    if (e.target === modal) {
+                        this.closeModal();
+                    }
+                    if (e.target === importModal) {
+                        this.closeImportModal();
+                    }
+                    if (e.target === reportsModal) {
+                        this.closeReportsModal();
+                    }
+                });
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeModal();
+                        this.closeImportModal();
+                        this.closeReportsModal();
+                    }
+                });
+            }
+
+            // Milan CRUD Operations
+            showModal(milan = null) {
+                const modal = document.getElementById('milanModal');
+                const modalTitle = document.getElementById('modalTitle');
+                
+                if (milan) {
+                    modalTitle.textContent = 'Edit Milan';
+                    this.currentEditingId = milan.id;
+                    this.populateForm(milan);
+                } else {
+                    modalTitle.textContent = 'Add New Milan';
+                    this.currentEditingId = null;
+                    this.resetForm();
+                }
+                
+                modal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            }
+
+            closeModal() {
+                document.getElementById('milanModal').style.display = 'none';
+                document.body.style.overflow = 'auto';
+                this.resetForm();
+            }
+
+            populateForm(milan) {
+                document.getElementById('milanName').value = milan.name;
+                document.getElementById('valay').value = milan.valay;
+                document.getElementById('date').value = milan.date;
+                document.getElementById('ssCount').value = milan.ssCount;
+                document.getElementById('shakaCount').value = milan.shakaCount;
+                document.getElementById('newSS').value = milan.newSS;
+                document.getElementById('othersCount').value = milan.othersCount;
+                document.getElementById('balaCount').value = milan.balaCount;
+                document.getElementById('notes').value = milan.notes || '';
+                
+                // Populate participants
+                const participantsList = document.getElementById('participantsList');
+                participantsList.innerHTML = '';
+                milan.participants.forEach(participant => {
+                    this.addParticipantField(participant.name, participant.type);
+                });
+                
+                this.calculateTotalSoochi();
+            }
+
+            resetForm() {
+                document.getElementById('milanForm').reset();
+                document.getElementById('participantsList').innerHTML = '';
+                this.calculateTotalSoochi();
+            }
+
+            saveMilan() {
+                const formData = this.getFormData();
+                
+                if (this.currentEditingId) {
+                    // Update existing milan
+                    const index = this.milans.findIndex(m => m.id === this.currentEditingId);
+                    if (index !== -1) {
+                        this.milans[index] = { ...formData, id: this.currentEditingId };
+                    }
+                } else {
+                    // Add new milan
+                    const newMilan = {
+                        ...formData,
+                        id: this.generateId(),
+                        createdAt: new Date().toISOString()
+                    };
+                    this.milans.push(newMilan);
+                }
+                
+                this.saveData();
+                this.updateDashboard();
+                this.renderMilans();
+                this.populateValayFilter();
+                this.closeModal();
+                this.showNotification('Milan saved successfully!', 'success');
+            }
+
+            getFormData() {
+                const participants = [];
+                document.querySelectorAll('.participant-item').forEach(item => {
+                    const name = item.querySelector('input[placeholder="Participant name"]').value.trim();
+                    const type = item.querySelector('select').value;
+                    if (name) {
+                        participants.push({ name, type });
+                    }
+                });
+                
+                return {
+                    name: document.getElementById('milanName').value.trim(),
+                    valay: document.getElementById('valay').value.trim(),
+                    date: document.getElementById('date').value,
+                    ssCount: parseInt(document.getElementById('ssCount').value) || 0,
+                    shakaCount: parseInt(document.getElementById('shakaCount').value) || 0,
+                    newSS: parseInt(document.getElementById('newSS').value) || 0,
+                    othersCount: parseInt(document.getElementById('othersCount').value) || 0,
+                    balaCount: parseInt(document.getElementById('balaCount').value) || 0,
+                    totalSoochi: parseInt(document.getElementById('totalSoochi').value) || 0,
+                    participants: participants,
+                    notes: document.getElementById('notes').value.trim()
+                };
+            }
+
+            editMilan(id) {
+                const milan = this.milans.find(m => m.id === id);
+                if (milan) {
+                    this.showModal(milan);
+                }
+            }
+
+            deleteMilan(id) {
+                if (confirm('Are you sure you want to delete this Milan? This action cannot be undone.')) {
+                    this.milans = this.milans.filter(m => m.id !== id);
+                    this.saveData();
+                    this.updateDashboard();
+                    this.renderMilans();
+                    this.populateValayFilter();
+                    this.showNotification('Milan deleted successfully!', 'success');
+                }
+            }
+
+            // Participant Management
+            addParticipant() {
+                this.addParticipantField();
+            }
+
+            addParticipantField(name = '', type = 'SS') {
+                const participantsList = document.getElementById('participantsList');
+                const participantDiv = document.createElement('div');
+                participantDiv.className = 'participant-item';
+                
+                participantDiv.innerHTML = `
+                    <input type="text" placeholder="Participant name" value="${name}" style="flex: 1;">
+                    <select style="min-width: 100px;">
+                        <option value="SS" ${type === 'SS' ? 'selected' : ''}>SS</option>
+                        <option value="New" ${type === 'New' ? 'selected' : ''}>New</option>
+                        <option value="Other" ${type === 'Other' ? 'selected' : ''}>Other</option>
+                        <option value="Bala" ${type === 'Bala' ? 'selected' : ''}>Bala</option>
+                    </select>
+                    <button type="button" class="btn-remove" onclick="this.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                participantsList.appendChild(participantDiv);
+            }
+
+            // Calculations
+            calculateTotalSoochi() {
+                const ssCount = parseInt(document.getElementById('ssCount').value) || 0;
+                const shakaCount = parseInt(document.getElementById('shakaCount').value) || 0;
+                const newSS = parseInt(document.getElementById('newSS').value) || 0;
+                const othersCount = parseInt(document.getElementById('othersCount').value) || 0;
+                const balaCount = parseInt(document.getElementById('balaCount').value) || 0;
+                
+                const total = ssCount + shakaCount + newSS + othersCount + balaCount;
+                document.getElementById('totalSoochi').value = total;
+            }
+
+            // Dashboard Updates
+            updateDashboard() {
+                const totalMilans = this.milans.length;
+                const totalAttendance = this.milans.reduce((sum, milan) => sum + milan.totalSoochi, 0);
+                const newJoiners = this.milans.reduce((sum, milan) => sum + milan.newSS, 0);
+                const averageAttendance = totalMilans > 0 ? (totalAttendance / totalMilans).toFixed(1) : 0;
+                
+                document.getElementById('totalMilans').textContent = totalMilans;
+                document.getElementById('totalAttendance').textContent = totalAttendance;
+                document.getElementById('newJoiners').textContent = newJoiners;
+                document.getElementById('averageAttendance').textContent = averageAttendance;
+            }
+
+            // Rendering
+            renderMilans() {
+                const tableBody = document.getElementById('milanTableBody');
+                const cardsContainer = document.getElementById('milanCards');
+                const emptyState = document.getElementById('emptyState');
+                
+                if (this.milans.length === 0) {
+                    tableBody.innerHTML = '';
+                    cardsContainer.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    return;
+                }
+                
+                emptyState.style.display = 'none';
+                
+                // Render table for desktop
+                tableBody.innerHTML = this.milans.map(milan => `
+                    <tr>
+                        <td><strong>${milan.name}</strong></td>
+                        <td>${milan.valay}</td>
+                        <td>${new Date(milan.date).toLocaleDateString()}</td>
+                        <td>${milan.ssCount}</td>
+                        <td><strong>${milan.totalSoochi}</strong></td>
+                        <td>${milan.newSS}</td>
+                        <td class="milan-actions">
+                            <button class="btn-small btn-edit" onclick="milanTracker.editMilan('${milan.id}')" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-small btn-remove" onclick="milanTracker.deleteMilan('${milan.id}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                // Render cards for mobile
+                cardsContainer.innerHTML = this.milans.map(milan => `
+                    <div class="milan-card">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                            <div>
+                                <h3 style="margin: 0; color: var(--primary-color);">${milan.name}</h3>
+                                <p style="margin: 0.25rem 0; color: var(--text-secondary);">${milan.valay} • ${new Date(milan.date).toLocaleDateString()}</p>
+                            </div>
+                            <div class="milan-actions">
+                                <button class="btn-small btn-edit" onclick="milanTracker.editMilan('${milan.id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-small btn-remove" onclick="milanTracker.deleteMilan('${milan.id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+                            <div><strong>${milan.ssCount}</strong><br><small>SS Count</small></div>
+                            <div><strong>${milan.totalSoochi}</strong><br><small>Total Soochi</small></div>
+                            <div><strong>${milan.newSS}</strong><br><small>New SS</small></div>
+                        </div>
+                        ${milan.notes ? `<p style="margin-top: 1rem; padding: 0.5rem; background: var(--background-color); border-radius: 4px;"><strong>Notes:</strong> ${milan.notes}</p>` : ''}
+                    </div>
+                `).join('');
+            }
+
+            // Search and Filter
+            handleSearch(query) {
+                // Implementation for search functionality
+                console.log('Search:', query);
+            }
+
+            handleFilter(valay) {
+                // Implementation for filter functionality
+                console.log('Filter:', valay);
+            }
+
+            populateValayFilter() {
+                const select = document.getElementById('valayFilter');
+                const reportSelect = document.getElementById('reportValay');
+                const valays = [...new Set(this.milans.map(milan => milan.valay))].sort();
+                
+                // Update main filter
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">All Valays</option>';
+                valays.forEach(valay => {
+                    const option = document.createElement('option');
+                    option.value = valay;
+                    option.textContent = valay;
+                    select.appendChild(option);
+                });
+                select.value = currentValue;
+                
+                // Update report filter
+                if (reportSelect) {
+                    reportSelect.innerHTML = '<option value="">All Valays</option>';
+                    valays.forEach(valay => {
+                        const option = document.createElement('option');
+                        option.value = valay;
+                        option.textContent = valay;
+                        reportSelect.appendChild(option);
+                    });
+                }
+            }
+
+            // Export/Import functionality
+            exportData() {
+                const dataStr = JSON.stringify(this.milans, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `milan-tracker-data-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                this.showNotification('Data exported successfully!', 'success');
+            }
+
+            exportToExcel() {
+                if (!window.XLSX) {
+                    alert('Excel functionality is not available. Please check your internet connection.');
+                    return;
+                }
+
+                const excelData = this.milans.map(milan => {
+                    const participantNames = milan.participants.map(p => `${p.name} (${p.type})`).join('; ');
+                    return {
+                        'Milan Name': milan.name,
+                        'Valay': milan.valay,
+                        'Date': milan.date,
+                        'SS Count': milan.ssCount,
+                        'Shaka Count': milan.shakaCount,
+                        'New SS': milan.newSS,
+                        'Others Count': milan.othersCount,
+                        'Bala Count': milan.balaCount,
+                        'Total Soochi': milan.totalSoochi,
+                        'Participants': participantNames,
+                        'Notes': milan.notes || ''
+                    };
+                });
+
+                const ws = XLSX.utils.json_to_sheet(excelData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Milan Data');
+                
+                const filename = `milan-tracker-data-${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(wb, filename);
+                
+                this.showNotification('Data exported to Excel successfully!', 'success');
+            }
+
+            showImportModal() {
+                document.getElementById('importModal').style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            }
+
+            closeImportModal() {
+                document.getElementById('importModal').style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+
+            updateImportInterface(type) {
+                const label = document.getElementById('fileInputLabel');
+                const input = document.getElementById('importFile');
+                const note = document.getElementById('importNote');
+                
+                if (type === 'excel') {
+                    label.textContent = 'Select Excel/CSV file to import';
+                    input.accept = '.xlsx,.xls,.csv';
+                    note.textContent = 'Supports Excel (.xlsx, .xls) and CSV files. Ensure columns match the export format.';
+                } else {
+                    label.textContent = 'Select JSON file to import';
+                    input.accept = '.json';
+                    note.textContent = 'This will replace all existing data. Make sure to export your current data first.';
+                }
+            }
+
+            importData() {
+                const fileInput = document.getElementById('importFile');
+                const file = fileInput.files[0];
+                const importType = document.querySelector('input[name="importType"]:checked').value;
+                
+                if (!file) {
+                    alert('Please select a file to import');
+                    return;
+                }
+
+                if (importType === 'excel') {
+                    this.importExcelData(file);
+                } else {
+                    this.importJsonData(file);
+                }
+            }
+
+            importJsonData(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        
+                        if (!Array.isArray(importedData)) {
+                            throw new Error('Invalid file format');
+                        }
+
+                        const isValid = importedData.every(milan => 
+                            milan.name && milan.valay && milan.date && 
+                            typeof milan.totalSoochi === 'number'
+                        );
+
+                        if (!isValid) {
+                            throw new Error('Invalid data structure');
+                        }
+
+                        if (confirm('This will replace all existing data. Continue?')) {
+                            this.milans = importedData;
+                            this.saveData();
+                            this.updateDashboard();
+                            this.renderMilans();
+                            this.populateValayFilter();
+                            this.closeImportModal();
+                            this.showNotification('JSON data imported successfully!', 'success');
+                        }
+                    } catch (error) {
+                        console.error('Error importing JSON:', error);
+                        alert('Error importing file. Please check the file format.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            importExcelData(file) {
+                if (!window.XLSX) {
+                    alert('Excel functionality is not available. Please check your internet connection.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                        const importedData = jsonData.map((row, index) => {
+                            const participants = row['Participants'] ? 
+                                row['Participants'].split(';').map(p => {
+                                    const match = p.trim().match(/^(.*)\s*\(([^)]+)\)$/);
+                                    if (match) {
+                                        return { name: match[1].trim(), type: match[2].trim() };
+                                    }
+                                    return { name: p.trim(), type: 'Other' };
+                                }).filter(p => p.name) : [];
+
+                            return {
+                                id: `imported_${Date.now()}_${index}`,
+                                name: row['Milan Name'] || '',
+                                valay: row['Valay'] || '',
+                                date: this.formatDateForInput(row['Date']) || new Date().toISOString().split('T')[0],
+                                ssCount: parseInt(row['SS Count']) || 0,
+                                shakaCount: parseInt(row['Shaka Count']) || 0,
+                                newSS: parseInt(row['New SS']) || 0,
+                                othersCount: parseInt(row['Others Count']) || 0,
+                                balaCount: parseInt(row['Bala Count']) || 0,
+                                totalSoochi: parseInt(row['Total Soochi']) || 0,
+                                participants: participants,
+                                notes: row['Notes'] || '',
+                                createdAt: new Date().toISOString()
+                            };
+                        });
+
+                        if (confirm(`Import ${importedData.length} records? This will replace all existing data.`)) {
+                            this.milans = importedData;
+                            this.saveData();
+                            this.updateDashboard();
+                            this.renderMilans();
+                            this.populateValayFilter();
+                            this.closeImportModal();
+                            this.showNotification('Excel data imported successfully!', 'success');
+                        }
+                    } catch (error) {
+                        console.error('Error importing Excel:', error);
+                        alert('Error importing Excel file. Please check the file format.');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            formatDateForInput(dateString) {
+                if (!dateString) return null;
+                
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    if (!isNaN(parseFloat(dateString))) {
+                        const excelDate = new Date((parseFloat(dateString) - 25569) * 86400 * 1000);
+                        return excelDate.toISOString().split('T')[0];
+                    }
+                    return null;
+                }
+                return date.toISOString().split('T')[0];
+            }
+
+            // Weekly Reports functionality
+            showReportsModal() {
+                document.getElementById('reportsModal').style.display = 'block';
+                document.body.style.overflow = 'hidden';
+                
+                // Set default date range (last 4 weeks)
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 28);
+                
+                document.getElementById('reportEndDate').value = endDate.toISOString().split('T')[0];
+                document.getElementById('reportStartDate').value = startDate.toISOString().split('T')[0];
+            }
+
+            closeReportsModal() {
+                document.getElementById('reportsModal').style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+
+            generateWeeklyReport() {
+                const startDate = document.getElementById('reportStartDate').value;
+                const endDate = document.getElementById('reportEndDate').value;
+                const selectedValay = document.getElementById('reportValay').value;
+                
+                if (!startDate || !endDate) {
+                    alert('Please select both start and end dates');
+                    return;
+                }
+                
+                if (new Date(startDate) > new Date(endDate)) {
+                    alert('Start date cannot be after end date');
+                    return;
+                }
+
+                const filteredMilans = this.milans.filter(milan => {
+                    const milanDate = new Date(milan.date);
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    
+                    const dateInRange = milanDate >= start && milanDate <= end;
+                    const valayMatch = !selectedValay || milan.valay === selectedValay;
+                    
+                    return dateInRange && valayMatch;
+                });
+
+                this.renderWeeklyReport(filteredMilans, startDate, endDate, selectedValay);
+                document.getElementById('exportReportBtn').style.display = 'inline-block';
+            }
+
+            renderWeeklyReport(milans, startDate, endDate, valay) {
+                const content = document.getElementById('weeklyReportContent');
+                
+                if (milans.length === 0) {
+                    content.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>No Milan data found for the selected date range${valay ? ` and Valay: ${valay}` : ''}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Calculate summary statistics
+                const totalMilans = milans.length;
+                const totalAttendance = milans.reduce((sum, milan) => sum + milan.totalSoochi, 0);
+                const totalNewSS = milans.reduce((sum, milan) => sum + milan.newSS, 0);
+                const totalBala = milans.reduce((sum, milan) => sum + milan.balaCount, 0);
+                const avgAttendance = totalAttendance / totalMilans;
+                
+                content.innerHTML = `
+                    <div class="report-header">
+                        <h3>Weekly Report: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}</h3>
+                        ${valay ? `<p class="report-filter">Filtered by Valay: <strong>${valay}</strong></p>` : ''}
+                    </div>
+                    
+                    <div class="weekly-summary">
+                        <div class="summary-card">
+                            <h4>Total Milans</h4>
+                            <div class="stat-value">${totalMilans}</div>
+                        </div>
+                        <div class="summary-card">
+                            <h4>Total Attendance</h4>
+                            <div class="stat-value">${totalAttendance}</div>
+                        </div>
+                        <div class="summary-card">
+                            <h4>Average Attendance</h4>
+                            <div class="stat-value">${avgAttendance.toFixed(1)}</div>
+                        </div>
+                        <div class="summary-card">
+                            <h4>New SS Joined</h4>
+                            <div class="stat-value">${totalNewSS}</div>
+                        </div>
+                        <div class="summary-card">
+                            <h4>Total Bala</h4>
+                            <div class="stat-value">${totalBala}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="milan-details">
+                        <h4>Milan Details</h4>
+                        ${milans.map(milan => `
+                            <div class="milan-card" style="margin-bottom: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <h5 style="margin: 0; color: var(--primary-color);">${milan.name}</h5>
+                                    <span style="color: var(--text-secondary);">${new Date(milan.date).toLocaleDateString()}</span>
+                                </div>
+                                <p style="margin: 0.25rem 0; color: var(--text-secondary);">Valay: ${milan.valay}</p>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1rem; margin-top: 0.5rem;">
+                                    <div style="text-align: center; padding: 0.5rem; background: var(--background-color); border-radius: 4px;">
+                                        <div style="font-weight: bold; color: var(--primary-color);">${milan.ssCount}</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">SS</div>
+                                    </div>
+                                    <div style="text-align: center; padding: 0.5rem; background: var(--background-color); border-radius: 4px;">
+                                        <div style="font-weight: bold; color: var(--primary-color);">${milan.shakaCount}</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Shaka</div>
+                                    </div>
+                                    <div style="text-align: center; padding: 0.5rem; background: var(--background-color); border-radius: 4px;">
+                                        <div style="font-weight: bold; color: var(--primary-color);">${milan.newSS}</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">New SS</div>
+                                    </div>
+                                    <div style="text-align: center; padding: 0.5rem; background: var(--background-color); border-radius: 4px;">
+                                        <div style="font-weight: bold; color: var(--primary-color);">${milan.balaCount}</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Bala</div>
+                                    </div>
+                                    <div style="text-align: center; padding: 0.5rem; background: var(--background-color); border-radius: 4px;">
+                                        <div style="font-weight: bold; color: var(--primary-color);">${milan.totalSoochi}</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Total</div>
+                                    </div>
+                                </div>
+                                ${milan.notes ? `<p style="margin-top: 0.5rem; font-style: italic;">Notes: ${milan.notes}</p>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            exportReportToExcel() {
+                if (!window.XLSX) {
+                    alert('Excel functionality is not available. Please check your internet connection.');
+                    return;
+                }
+
+                const startDate = document.getElementById('reportStartDate').value;
+                const endDate = document.getElementById('reportEndDate').value;
+                const selectedValay = document.getElementById('reportValay').value;
+                
+                const filteredMilans = this.milans.filter(milan => {
+                    const milanDate = new Date(milan.date);
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    
+                    const dateInRange = milanDate >= start && milanDate <= end;
+                    const valayMatch = !selectedValay || milan.valay === selectedValay;
+                    
+                    return dateInRange && valayMatch;
+                });
+
+                if (filteredMilans.length === 0) {
+                    alert('No data to export for the selected criteria');
+                    return;
+                }
+
+                // Create summary sheet
+                const summaryData = [{
+                    'Report Period': `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`,
+                    'Valay Filter': selectedValay || 'All Valays',
+                    'Total Milans': filteredMilans.length,
+                    'Total Attendance': filteredMilans.reduce((sum, milan) => sum + milan.totalSoochi, 0),
+                    'Average Attendance': (filteredMilans.reduce((sum, milan) => sum + milan.totalSoochi, 0) / filteredMilans.length).toFixed(1),
+                    'Total New SS': filteredMilans.reduce((sum, milan) => sum + milan.newSS, 0),
+                    'Total Bala': filteredMilans.reduce((sum, milan) => sum + milan.balaCount, 0)
+                }];
+
+                // Create detailed data
+                const detailedData = filteredMilans.map(milan => ({
+                    'Date': new Date(milan.date).toLocaleDateString(),
+                    'Milan Name': milan.name,
+                    'Valay': milan.valay,
+                    'SS Count': milan.ssCount,
+                    'Shaka Count': milan.shakaCount,
+                    'New SS': milan.newSS,
+                    'Others Count': milan.othersCount,
+                    'Bala Count': milan.balaCount,
+                    'Total Soochi': milan.totalSoochi,
+                    'Participants': milan.participants.map(p => `${p.name} (${p.type})`).join('; '),
+                    'Notes': milan.notes || ''
+                }));
+
+                // Create workbook
+                const wb = XLSX.utils.book_new();
+                
+                const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+                XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+                
+                const detailWs = XLSX.utils.json_to_sheet(detailedData);
+                XLSX.utils.book_append_sheet(wb, detailWs, 'Detailed Data');
+                
+                const filename = `milan-weekly-report-${startDate}-to-${endDate}.xlsx`;
+                XLSX.writeFile(wb, filename);
+                
+                this.showNotification('Weekly report exported to Excel successfully!', 'success');
+            }
+
+            // Utility Methods
+            generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = 'notification';
+                notification.innerHTML = `
+                    <i class="fas fa-check-circle" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+                    ${message}
+                `;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 3000);
+            }
+
+            addSampleDataIfEmpty() {
+                if (this.milans.length === 0) {
+                    const sampleData = [
+                        {
+                            id: 'sample1',
+                            name: 'Ashwatthama',
+                            valay: 'Gachibowli',
+                            date: '2025-07-20',
+                            ssCount: 8,
+                            shakaCount: 5,
+                            newSS: 3,
+                            othersCount: 2,
+                            balaCount: 4,
+                            totalSoochi: 15,
+                            participants: [
+                                { name: 'Rajesh Kumar', type: 'SS' },
+                                { name: 'Priya Sharma', type: 'SS' },
+                                { name: 'Amit Singh', type: 'New' },
+                                { name: 'Sneha Patel', type: 'Bala' }
+                            ],
+                            notes: 'Great participation from all divisions',
+                            createdAt: new Date().toISOString()
+                        },
+                        {
+                            id: 'sample2',
+                            name: 'Vishvamitra',
+                            valay: 'Narsingi',
+                            date: '2025-07-13',
+                            ssCount: 6,
+                            shakaCount: 4,
+                            newSS: 2,
+                            othersCount: 0,
+                            balaCount: 6,
+                            totalSoochi: 10,
+                            participants: [
+                                { name: 'Vikram Reddy', type: 'SS' },
+                                { name: 'Sunita Devi', type: 'SS' },
+                                { name: 'Rahul Gupta', type: 'New' },
+                                { name: 'Kavya Sharma', type: 'Bala' }
+                            ],
+                            notes: 'Good turnout from Bala division',
+                            createdAt: new Date().toISOString()
+                        }
+                    ];
+                    
+                    this.milans = sampleData;
+                    this.saveData();
+                    this.updateDashboard();
+                    this.renderMilans();
+                    this.populateValayFilter();
+                }
+            }
+        }
+
+        // Global functions for HTML onclick events
+        function showAddForm() {
+            milanTracker.showModal();
+        }
+
+        function closeModal() {
+            milanTracker.closeModal();
+        }
+
+        function addParticipant() {
+            milanTracker.addParticipant();
+        }
+
+        function exportData() {
+            milanTracker.exportData();
+        }
+
+        function exportToExcel() {
+            milanTracker.exportToExcel();
+        }
+
+        function showImportModal() {
+            milanTracker.showImportModal();
+        }
+
+        function closeImportModal() {
+            milanTracker.closeImportModal();
+        }
+
+        function importData() {
+            milanTracker.importData();
+        }
+
+        function showReportsModal() {
+            milanTracker.showReportsModal();
+        }
+
+        function closeReportsModal() {
+            milanTracker.closeReportsModal();
+        }
+
+        function generateWeeklyReport() {
+            milanTracker.generateWeeklyReport();
+        }
+
+        function exportReportToExcel() {
+            milanTracker.exportReportToExcel();
+        }
+
+        // Initialize the application
+        let milanTracker;
+        document.addEventListener('DOMContentLoaded', () => {
+            milanTracker = new MilanTracker();
+        });
+    </script>
+</body>
+</html>

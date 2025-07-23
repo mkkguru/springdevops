@@ -62,15 +62,26 @@ class MilanTracker {
             this.handleFilter(e.target.value);
         });
 
+        // Import type selector
+        document.addEventListener('change', (e) => {
+            if (e.target.name === 'importType') {
+                this.updateImportInterface(e.target.value);
+            }
+        });
+
         // Modal close on outside click
         window.addEventListener('click', (e) => {
             const modal = document.getElementById('milanModal');
             const importModal = document.getElementById('importModal');
+            const reportsModal = document.getElementById('reportsModal');
             if (e.target === modal) {
                 this.closeModal();
             }
             if (e.target === importModal) {
                 this.closeImportModal();
+            }
+            if (e.target === reportsModal) {
+                this.closeReportsModal();
             }
         });
 
@@ -513,12 +524,80 @@ class MilanTracker {
     importData() {
         const fileInput = document.getElementById('importFile');
         const file = fileInput.files[0];
+        const importType = document.querySelector('input[name="importType"]:checked').value;
         
         if (!file) {
             alert('Please select a file to import');
             return;
         }
 
+        if (importType === 'excel') {
+            this.importExcelData(file);
+        } else {
+            this.importJsonData(file);
+        }
+    }
+
+    importExcelData(file) {
+        if (!window.XLSX) {
+            alert('Excel functionality is not available. Please check your internet connection.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                const importedData = jsonData.map((row, index) => {
+                    const participants = row['Participants'] ? 
+                        row['Participants'].split(';').map(p => {
+                            const match = p.trim().match(/^(.*)\s*\(([^)]+)\)$/);
+                            if (match) {
+                                return { name: match[1].trim(), type: match[2].trim() };
+                            }
+                            return { name: p.trim(), type: 'Other' };
+                        }).filter(p => p.name) : [];
+
+                    return {
+                        id: `imported_${Date.now()}_${index}`,
+                        name: row['Milan Name'] || '',
+                        valay: row['Valay'] || '',
+                        date: this.formatDateForInput(row['Date']) || new Date().toISOString().split('T')[0],
+                        ssCount: parseInt(row['SS Count']) || 0,
+                        shakaCount: parseInt(row['Shaka Count']) || 0,
+                        newSS: parseInt(row['New SS']) || 0,
+                        othersCount: parseInt(row['Others Count']) || 0,
+                        balaCount: parseInt(row['Bala Count']) || 0,
+                        totalSoochi: parseInt(row['Total Soochi']) || 0,
+                        participants: participants,
+                        notes: row['Notes'] || '',
+                        createdAt: new Date().toISOString()
+                    };
+                });
+
+                if (confirm(`Import ${importedData.length} records? This will replace all existing data.`)) {
+                    this.milans = importedData;
+                    this.saveData();
+                    this.updateDashboard();
+                    this.renderMilans();
+                    this.populateValayFilter();
+                    this.closeImportModal();
+                    this.showNotification('Excel data imported successfully!', 'success');
+                }
+            } catch (error) {
+                console.error('Error importing Excel:', error);
+                alert('Error importing Excel file. Please check the file format.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    importJsonData(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
@@ -528,7 +607,6 @@ class MilanTracker {
                     throw new Error('Invalid file format');
                 }
 
-                // Validate data structure
                 const isValid = importedData.every(milan => 
                     milan.name && milan.valay && milan.date && 
                     typeof milan.totalSoochi === 'number'
@@ -545,19 +623,356 @@ class MilanTracker {
                     this.renderMilans();
                     this.populateValayFilter();
                     this.closeImportModal();
-                    this.showNotification('Data imported successfully!', 'success');
+                    this.showNotification('JSON data imported successfully!', 'success');
                 }
             } catch (error) {
-                alert('Error importing data: ' + error.message);
+                console.error('Error importing JSON:', error);
+                alert('Error importing file. Please check the file format.');
             }
         };
-        
         reader.readAsText(file);
+    }
+
+    formatDateForInput(dateString) {
+        if (!dateString) return null;
+        
+        // Handle various date formats
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            // Try parsing Excel date serial number
+            if (!isNaN(parseFloat(dateString))) {
+                const excelDate = new Date((parseFloat(dateString) - 25569) * 86400 * 1000);
+                return excelDate.toISOString().split('T')[0];
+            }
+            return null;
+        }
+        return date.toISOString().split('T')[0];
     }
 
     // Utility Methods
     generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    // Excel Export/Import functionality
+    exportToExcel() {
+        if (!window.XLSX) {
+            alert('Excel functionality is not available. Please check your internet connection.');
+            return;
+        }
+
+        const excelData = this.milans.map(milan => {
+            const participantNames = milan.participants.map(p => `${p.name} (${p.type})`).join('; ');
+            return {
+                'Milan Name': milan.name,
+                'Valay': milan.valay,
+                'Date': milan.date,
+                'SS Count': milan.ssCount,
+                'Shaka Count': milan.shakaCount,
+                'New SS': milan.newSS,
+                'Others Count': milan.othersCount,
+                'Bala Count': milan.balaCount,
+                'Total Soochi': milan.totalSoochi,
+                'Participants': participantNames,
+                'Notes': milan.notes || ''
+            };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Milan Data');
+        
+        const filename = `milan-tracker-data-${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, filename);
+        
+        this.showNotification('Data exported to Excel successfully!', 'success');
+    }
+
+    updateImportInterface(type) {
+        const label = document.getElementById('fileInputLabel');
+        const input = document.getElementById('importFile');
+        const note = document.getElementById('importNote');
+        
+        if (type === 'excel') {
+            label.textContent = 'Select Excel/CSV file to import';
+            input.accept = '.xlsx,.xls,.csv';
+            note.textContent = 'Supports Excel (.xlsx, .xls) and CSV files. Ensure columns match the export format.';
+        } else {
+            label.textContent = 'Select JSON file to import';
+            input.accept = '.json';
+            note.textContent = 'This will replace all existing data. Make sure to export your current data first.';
+        }
+    }
+
+    // Weekly Reports functionality
+    showReportsModal() {
+        document.getElementById('reportsModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        
+        // Set default date range (last 4 weeks)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 28);
+        
+        document.getElementById('reportEndDate').value = endDate.toISOString().split('T')[0];
+        document.getElementById('reportStartDate').value = startDate.toISOString().split('T')[0];
+        
+        // Populate Valay filter
+        this.populateReportValayFilter();
+    }
+
+    closeReportsModal() {
+        document.getElementById('reportsModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    populateReportValayFilter() {
+        const select = document.getElementById('reportValay');
+        const valays = [...new Set(this.milans.map(milan => milan.valay))].sort();
+        
+        // Clear existing options except "All Valays"
+        select.innerHTML = '<option value="">All Valays</option>';
+        
+        valays.forEach(valay => {
+            const option = document.createElement('option');
+            option.value = valay;
+            option.textContent = valay;
+            select.appendChild(option);
+        });
+    }
+
+    generateWeeklyReport() {
+        const startDate = document.getElementById('reportStartDate').value;
+        const endDate = document.getElementById('reportEndDate').value;
+        const selectedValay = document.getElementById('reportValay').value;
+        
+        if (!startDate || !endDate) {
+            alert('Please select both start and end dates');
+            return;
+        }
+        
+        if (new Date(startDate) > new Date(endDate)) {
+            alert('Start date cannot be after end date');
+            return;
+        }
+
+        const filteredMilans = this.milans.filter(milan => {
+            const milanDate = new Date(milan.date);
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            const dateInRange = milanDate >= start && milanDate <= end;
+            const valayMatch = !selectedValay || milan.valay === selectedValay;
+            
+            return dateInRange && valayMatch;
+        });
+
+        this.renderWeeklyReport(filteredMilans, startDate, endDate, selectedValay);
+        document.getElementById('exportReportBtn').style.display = 'inline-block';
+    }
+
+    renderWeeklyReport(milans, startDate, endDate, valay) {
+        const content = document.getElementById('weeklyReportContent');
+        
+        if (milans.length === 0) {
+            content.innerHTML = `
+                <div class="report-placeholder">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>No Milan data found for the selected date range${valay ? ` and Valay: ${valay}` : ''}</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Calculate summary statistics
+        const totalMilans = milans.length;
+        const totalAttendance = milans.reduce((sum, milan) => sum + milan.totalSoochi, 0);
+        const totalNewSS = milans.reduce((sum, milan) => sum + milan.newSS, 0);
+        const totalBala = milans.reduce((sum, milan) => sum + milan.balaCount, 0);
+        const avgAttendance = totalAttendance / totalMilans;
+        
+        // Group by weeks
+        const weeklyData = this.groupMilansByWeek(milans);
+        
+        content.innerHTML = `
+            <div class="report-header">
+                <h3>Weekly Report: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}</h3>
+                ${valay ? `<p class="report-filter">Filtered by Valay: <strong>${valay}</strong></p>` : ''}
+            </div>
+            
+            <div class="weekly-summary">
+                <div class="summary-card">
+                    <h4>Total Milans</h4>
+                    <div class="value">${totalMilans}</div>
+                </div>
+                <div class="summary-card">
+                    <h4>Total Attendance</h4>
+                    <div class="value">${totalAttendance}</div>
+                </div>
+                <div class="summary-card">
+                    <h4>Average Attendance</h4>
+                    <div class="value">${avgAttendance.toFixed(1)}</div>
+                </div>
+                <div class="summary-card">
+                    <h4>New SS Joined</h4>
+                    <div class="value">${totalNewSS}</div>
+                </div>
+                <div class="summary-card">
+                    <h4>Total Bala</h4>
+                    <div class="value">${totalBala}</div>
+                </div>
+            </div>
+            
+            <div class="weekly-details">
+                ${weeklyData.map(week => this.renderWeekSection(week)).join('')}
+            </div>
+        `;
+    }
+
+    groupMilansByWeek(milans) {
+        const weeks = {};
+        
+        milans.forEach(milan => {
+            const date = new Date(milan.date);
+            const weekStart = new Date(date);
+            weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+            const weekKey = weekStart.toISOString().split('T')[0];
+            
+            if (!weeks[weekKey]) {
+                weeks[weekKey] = {
+                    startDate: weekKey,
+                    milans: []
+                };
+            }
+            weeks[weekKey].milans.push(milan);
+        });
+        
+        return Object.values(weeks).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    }
+
+    renderWeekSection(week) {
+        const weekStart = new Date(week.startDate);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        
+        const weekTotal = week.milans.reduce((sum, milan) => sum + milan.totalSoochi, 0);
+        
+        return `
+            <div class="week-section">
+                <div class="week-header">
+                    Week of ${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()} 
+                    (${week.milans.length} Milans, ${weekTotal} Total Attendance)
+                </div>
+                <div class="week-content">
+                    ${week.milans.map(milan => this.renderMilanItem(milan)).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    renderMilanItem(milan) {
+        return `
+            <div class="milan-item">
+                <div class="milan-header">
+                    <strong>${milan.name}</strong> - ${milan.valay} 
+                    <span class="milan-date">(${new Date(milan.date).toLocaleDateString()})</span>
+                </div>
+                <div class="milan-summary">
+                    <div class="milan-stat">
+                        <div class="label">SS</div>
+                        <div class="value">${milan.ssCount}</div>
+                    </div>
+                    <div class="milan-stat">
+                        <div class="label">Shaka</div>
+                        <div class="value">${milan.shakaCount}</div>
+                    </div>
+                    <div class="milan-stat">
+                        <div class="label">New SS</div>
+                        <div class="value">${milan.newSS}</div>
+                    </div>
+                    <div class="milan-stat">
+                        <div class="label">Others</div>
+                        <div class="value">${milan.othersCount}</div>
+                    </div>
+                    <div class="milan-stat">
+                        <div class="label">Bala</div>
+                        <div class="value">${milan.balaCount}</div>
+                    </div>
+                    <div class="milan-stat">
+                        <div class="label">Total</div>
+                        <div class="value">${milan.totalSoochi}</div>
+                    </div>
+                </div>
+                ${milan.notes ? `<div class="milan-notes"><strong>Notes:</strong> ${milan.notes}</div>` : ''}
+            </div>
+        `;
+    }
+
+    exportReportToExcel() {
+        if (!window.XLSX) {
+            alert('Excel functionality is not available. Please check your internet connection.');
+            return;
+        }
+
+        const startDate = document.getElementById('reportStartDate').value;
+        const endDate = document.getElementById('reportEndDate').value;
+        const selectedValay = document.getElementById('reportValay').value;
+        
+        const filteredMilans = this.milans.filter(milan => {
+            const milanDate = new Date(milan.date);
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            const dateInRange = milanDate >= start && milanDate <= end;
+            const valayMatch = !selectedValay || milan.valay === selectedValay;
+            
+            return dateInRange && valayMatch;
+        });
+
+        if (filteredMilans.length === 0) {
+            alert('No data to export for the selected criteria');
+            return;
+        }
+
+        // Create summary sheet
+        const summaryData = [{
+            'Report Period': `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`,
+            'Valay Filter': selectedValay || 'All Valays',
+            'Total Milans': filteredMilans.length,
+            'Total Attendance': filteredMilans.reduce((sum, milan) => sum + milan.totalSoochi, 0),
+            'Average Attendance': (filteredMilans.reduce((sum, milan) => sum + milan.totalSoochi, 0) / filteredMilans.length).toFixed(1),
+            'Total New SS': filteredMilans.reduce((sum, milan) => sum + milan.newSS, 0),
+            'Total Bala': filteredMilans.reduce((sum, milan) => sum + milan.balaCount, 0)
+        }];
+
+        // Create detailed data
+        const detailedData = filteredMilans.map(milan => ({
+            'Date': new Date(milan.date).toLocaleDateString(),
+            'Milan Name': milan.name,
+            'Valay': milan.valay,
+            'SS Count': milan.ssCount,
+            'Shaka Count': milan.shakaCount,
+            'New SS': milan.newSS,
+            'Others Count': milan.othersCount,
+            'Bala Count': milan.balaCount,
+            'Total Soochi': milan.totalSoochi,
+            'Participants': milan.participants.map(p => `${p.name} (${p.type})`).join('; '),
+            'Notes': milan.notes || ''
+        }));
+
+        // Create workbook
+        const wb = XLSX.utils.book_new();
+        
+        const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+        
+        const detailWs = XLSX.utils.json_to_sheet(detailedData);
+        XLSX.utils.book_append_sheet(wb, detailWs, 'Detailed Data');
+        
+        const filename = `milan-weekly-report-${startDate}-to-${endDate}.xlsx`;
+        XLSX.writeFile(wb, filename);
+        
+        this.showNotification('Weekly report exported to Excel successfully!', 'success');
     }
 
     showNotification(message, type = 'info') {
@@ -615,6 +1030,26 @@ function removeParticipant(button) {
 
 function importData() {
     milanTracker.importData();
+}
+
+function exportToExcel() {
+    milanTracker.exportToExcel();
+}
+
+function showReportsModal() {
+    milanTracker.showReportsModal();
+}
+
+function closeReportsModal() {
+    milanTracker.closeReportsModal();
+}
+
+function generateWeeklyReport() {
+    milanTracker.generateWeeklyReport();
+}
+
+function exportReportToExcel() {
+    milanTracker.exportReportToExcel();
 }
 
 // Initialize the application

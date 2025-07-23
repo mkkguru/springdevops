@@ -6,6 +6,8 @@
     <title>IT Milan Tracker</title>
     <link rel="stylesheet" href="/css/milan-tracker.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SheetJS for Excel functionality -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -17,8 +19,17 @@
                     <h1>IT Milan Tracker</h1>
                 </div>
                 <div class="header-actions">
+                    <button class="btn btn-info" onclick="showReportsModal()">
+                        <i class="fas fa-chart-line"></i> Weekly Reports
+                    </button>
+                    <button class="btn btn-success" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel"></i> Export Excel
+                    </button>
                     <button class="btn btn-secondary" onclick="exportData()">
-                        <i class="fas fa-download"></i> Export Data
+                        <i class="fas fa-download"></i> Export JSON
+                    </button>
+                    <button class="btn btn-warning" onclick="showImportModal()">
+                        <i class="fas fa-upload"></i> Import
                     </button>
                     <button class="btn btn-primary" onclick="showAddForm()">
                         <i class="fas fa-plus"></i> Add Milan
@@ -192,13 +203,63 @@
                     <span class="close" onclick="closeImportModal()">&times;</span>
                 </div>
                 <div class="import-section">
+                    <div class="import-type-selector">
+                        <label><input type="radio" name="importType" value="json" checked> JSON File</label>
+                        <label><input type="radio" name="importType" value="excel"> Excel/CSV File</label>
+                    </div>
                     <div class="form-group">
-                        <label for="importFile">Select JSON file to import</label>
-                        <input type="file" id="importFile" accept=".json">
+                        <label for="importFile" id="fileInputLabel">Select JSON file to import</label>
+                        <input type="file" id="importFile" accept=".json,.xlsx,.xls,.csv">
+                    </div>
+                    <div class="import-note">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="importNote">This will replace all existing data. Make sure to export your current data first.</span>
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeImportModal()">Cancel</button>
                         <button type="button" class="btn btn-primary" onclick="importData()">Import</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly Reports Modal -->
+        <div id="reportsModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h3>Weekly Reports</h3>
+                    <span class="close" onclick="closeReportsModal()">&times;</span>
+                </div>
+                <div class="reports-section">
+                    <div class="reports-controls">
+                        <div class="date-range-selector">
+                            <div class="form-group">
+                                <label for="reportStartDate">From Date:</label>
+                                <input type="date" id="reportStartDate">
+                            </div>
+                            <div class="form-group">
+                                <label for="reportEndDate">To Date:</label>
+                                <input type="date" id="reportEndDate">
+                            </div>
+                            <div class="form-group">
+                                <label for="reportValay">Filter by Valay:</label>
+                                <select id="reportValay">
+                                    <option value="">All Valays</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" onclick="generateWeeklyReport()">
+                                <i class="fas fa-chart-line"></i> Generate Report
+                            </button>
+                            <button class="btn btn-success" onclick="exportReportToExcel()" id="exportReportBtn" style="display: none;">
+                                <i class="fas fa-file-excel"></i> Export Report
+                            </button>
+                        </div>
+                    </div>
+                    <div id="weeklyReportContent" class="report-content">
+                        <div class="report-placeholder">
+                            <i class="fas fa-chart-bar"></i>
+                            <p>Select date range and generate report to view weekly statistics</p>
+                        </div>
                     </div>
                 </div>
             </div>
